@@ -93,14 +93,18 @@ export default function Browse() {
                   ) : (
                     <span className="font-bold text-gray-500">No Image</span>
                   )}
-                  {/* Tag */}
-                  <div className={`absolute top-2 right-2 px-3 py-1 font-black uppercase text-sm border-2 border-black ${item.type === 'lost' ? 'bg-neo-pink' : 'bg-neo-green'}`}>
-                    {item.type}
-                  </div>
                 </div>
 
                 {/* Content Section */}
                 <div className="p-4 flex flex-col flex-grow">
+                  <div className="flex gap-2 mb-3">
+                    <span className={`inline-block font-black text-xs uppercase px-2 py-1 border-2 border-black ${item.type === "lost" ? "bg-neo-pink text-white" : "bg-neo-green text-black"}`}>
+                      {item.type}
+                    </span>
+                    <span className={`inline-block font-black text-xs uppercase px-2 py-1 border-2 border-black ${item.status === 'resolved' ? 'bg-neo-blue text-white' : 'bg-neo-yellow text-black'}`}>
+                      {item.status === 'resolved' ? 'Resolved' : 'Active'}
+                    </span>
+                  </div>
                   <h3 className="text-xl font-black uppercase line-clamp-1">{item.title}</h3>
                   <p className="text-sm font-bold text-gray-600 mb-2 mt-1">📍 {item.location}</p>
                   <p className="font-medium text-gray-800 line-clamp-3 mb-4 flex-grow">

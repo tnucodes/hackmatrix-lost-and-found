@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import dynamic from "next/dynamic";
+
+const MapPicker = dynamic(() => import("../components/MapPicker"), { ssr: false });
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 
@@ -35,6 +38,7 @@ export default function ReportFound() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
+  const [coordinates, setCoordinates] = useState(null);
   const [image, setImage] = useState(null);
   
   const [loading, setLoading] = useState(false);
@@ -56,19 +60,19 @@ export default function ReportFound() {
     setError("");
 
     try {
-      let imageUrl = "";
+      let base64String = "";
       let aiTags = [];
       let aiDescription = "";
 
       // 1. Compress the image and convert it to Base64
-      imageUrl = await compressImage(image);
+      base64String = await compressImage(image);
 
       // 2. Ask our new Gemini API route to analyze the image!
       try {
         const aiResponse = await fetch("/api/analyze-image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ base64Image: imageUrl })
+          body: JSON.stringify({ base64Image: base64String })
         });
         const aiData = await aiResponse.json();
         
@@ -79,20 +83,19 @@ export default function ReportFound() {
       }
 
       // 3. Save to the "foundItems" collection in Firestore Database
-      await addDoc(collection(db, "foundItems"), {
-        title: title,
-        description: description,
-        location: location,
-        imageUrl: imageUrl, 
-        finderEmail: user.email,
+      const docRef = await addDoc(collection(db, "foundItems"), {
+        title,
+        description,
+        location,
+        coordinates,
+        imageUrl: base64String, // Store base64 directly
+        aiDescription,
+        aiTags,
         finderId: user.uid,
-        status: "available",
-        aiTags: aiTags,
-        aiDescription: aiDescription,
-        createdAt: serverTimestamp()
+        finderEmail: user.email,
+        status: "active",
+        createdAt: serverTimestamp(),
       });
-
-      // (Later, we will add the Gemini AI description generator right here!)
 
       router.push("/");
     } catch (err) {
@@ -146,15 +149,20 @@ export default function ReportFound() {
           </div>
 
           <div>
-            <label className="block font-bold mb-1">Where did you find it?</label>
+            <label className="block text-xl font-black uppercase tracking-widest mb-2">Location Description</label>
             <input 
               type="text" 
               required
-              placeholder="e.g., Campus Cafe, Table 4"
-              className="w-full p-3 neo-border focus:outline-none focus:bg-gray-50 font-medium"
+              placeholder="e.g. Canteen Area"
+              className="w-full p-4 text-xl border-4 border-black focus:outline-none focus:bg-neo-yellow font-bold"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
             />
+          </div>
+
+          <div>
+            <label className="block text-xl font-black uppercase tracking-widest mb-2">Pinpoint on Map</label>
+            <MapPicker onLocationSelect={(coords) => setCoordinates(coords)} />
           </div>
 
           <div>

@@ -6,6 +6,9 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { MessageSquare, MapPin, Sparkles, Trophy } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import dynamic from "next/dynamic";
+
+const MapDisplay = dynamic(() => import("../../components/MapDisplay"), { ssr: false });
 
 export default function ItemDetails() {
   const router = useRouter();
@@ -88,10 +91,11 @@ export default function ItemDetails() {
 
   const handleMarkResolved = async () => {
     try {
-      const docRef = doc(db, "foundItems", item.id);
+      const collectionName = type === "lost" ? "lostItems" : "foundItems";
+      const docRef = doc(db, collectionName, item.id);
       await updateDoc(docRef, { status: "resolved" });
       setItem({ ...item, status: "resolved" });
-      alert("Item marked as returned! You earned 50 Trust Points!");
+      alert("Item marked as resolved! You earned 50 Trust Points!");
     } catch (err) {
       console.error("Error updating status:", err);
     }
@@ -142,16 +146,19 @@ export default function ItemDetails() {
           </div>
 
           {/* Details Section */}
-          <div className="p-8 w-full md:w-1/2 flex flex-col">
-            <div className={`inline-block px-3 py-1 font-black uppercase text-sm border-2 border-black w-max mb-4 ${type === 'lost' ? 'bg-neo-pink' : 'bg-neo-green'}`}>
-              {type === "lost" ? "Lost Item" : "Found Item"}
-            </div>
-            
-            <h1 className="text-4xl font-black uppercase tracking-tighter mb-4">{item.title}</h1>
-            
-            <p className="text-lg font-bold text-gray-700 flex items-center gap-2 mb-6">
-              <MapPin size={24} /> {item.location}
-            </p>
+            <div className="md:w-1/2 p-8 flex flex-col">
+              <div className="flex gap-2 items-center mb-4">
+                <span className={`px-3 py-1 font-black text-sm uppercase tracking-widest border-2 border-black ${type === 'lost' ? 'bg-neo-pink' : 'bg-neo-green'}`}>
+                  {type}
+                </span>
+                <span className={`px-3 py-1 font-black text-sm uppercase tracking-widest border-2 border-black ${item.status === 'resolved' ? 'bg-neo-blue text-white' : 'bg-neo-yellow'}`}>
+                  {item.status === 'resolved' ? '✅ Resolved' : '🔴 Active'}
+                </span>
+              </div>
+              <h2 className="text-4xl font-black uppercase tracking-tighter mb-2">{item.title}</h2>
+              <p className="text-gray-500 font-bold mb-6 flex items-center gap-2">
+                <MapPin size={18} /> {item.location}
+              </p>
             
             <div className="bg-gray-50 border-2 border-black p-4 mb-6">
               <h3 className="font-bold uppercase text-sm text-gray-500 mb-2">Description</h3>
@@ -159,17 +166,24 @@ export default function ItemDetails() {
             </div>
 
             {/* Map View */}
-            <div className="bg-white border-2 border-black p-2 mb-6">
-              <h3 className="font-bold uppercase text-sm text-gray-500 mb-2">Map View</h3>
-              <iframe 
-                width="100%" 
-                height="200" 
-                style={{ border: 0 }} 
-                loading="lazy" 
-                allowFullScreen 
-                src={`https://maps.google.com/maps?q=${encodeURIComponent(item.location)}&output=embed`}
-              ></iframe>
-            </div>
+            {item.coordinates ? (
+              <div className="bg-white border-2 border-black p-2 mb-6 relative z-0">
+                <h3 className="font-bold uppercase text-sm text-gray-500 mb-2">Map View</h3>
+                <MapDisplay lat={item.coordinates.lat} lng={item.coordinates.lng} />
+              </div>
+            ) : (
+              <div className="bg-white border-2 border-black p-2 mb-6">
+                <h3 className="font-bold uppercase text-sm text-gray-500 mb-2">Map View (Legacy)</h3>
+                <iframe 
+                  width="100%" 
+                  height="200" 
+                  style={{ border: 0 }} 
+                  loading="lazy" 
+                  allowFullScreen 
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(item.location)}&output=embed`}
+                ></iframe>
+              </div>
+            )}
 
             {item.aiDescription && (
               <div className="bg-neo-bg border-2 border-black p-4 mb-6 relative">
@@ -185,14 +199,17 @@ export default function ItemDetails() {
             )}
 
             {/* Gamification Action */}
-            {type === "found" && user && user.uid === item.finderId && item.status !== "resolved" && (
+            {user && (
+              (type === "found" && user.uid === item.finderId) ||
+              (type === "lost" && user.uid === item.ownerId)
+            ) && item.status !== "resolved" && (
               <div className="bg-neo-yellow border-2 border-black p-4 mb-6 text-center">
-                <h3 className="font-black uppercase mb-2">Did you return this item?</h3>
+                <h3 className="font-black uppercase mb-2">Did this item find its home?</h3>
                 <button 
                   onClick={handleMarkResolved}
                   className="bg-black text-white px-6 py-3 font-black uppercase tracking-widest flex items-center justify-center gap-2 mx-auto hover:bg-gray-800"
                 >
-                  <Trophy size={20} className="text-neo-yellow" /> Mark as Returned (+50 Trust Points)
+                  <Trophy size={20} className="text-neo-yellow" /> Mark as Resolved (+50 Trust Points)
                 </button>
               </div>
             )}

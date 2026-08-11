@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import dynamic from "next/dynamic";
+
+const MapPicker = dynamic(() => import("../components/MapPicker"), { ssr: false });
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 
@@ -37,6 +40,7 @@ export default function ReportLost() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
+  const [coordinates, setCoordinates] = useState(null);
   const [image, setImage] = useState(null);
   
   const [loading, setLoading] = useState(false);
@@ -65,10 +69,11 @@ export default function ReportLost() {
         title: title,
         description: description,
         location: location,
+        coordinates: coordinates,
         imageUrl: imageUrl,
         ownerEmail: user.email,
         ownerId: user.uid,
-        status: "lost", // We can change this to "resolved" later when found!
+        status: "active",
         createdAt: serverTimestamp() // Firebase automatically sets the exact time
       });
 
@@ -125,18 +130,23 @@ export default function ReportLost() {
           </div>
 
           <div>
-            <label className="block font-bold mb-1">Last Seen Location</label>
+            <label className="block text-xl font-black uppercase tracking-widest mb-2">Location Description</label>
             <input 
               type="text" 
-              required
-              placeholder="e.g., Main Library, 2nd Floor"
-              className="w-full p-3 neo-border focus:outline-none focus:bg-gray-50 font-medium"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
+              placeholder="e.g. Near the main library entrance"
+              required
+              className="w-full p-4 text-xl border-4 border-black focus:outline-none focus:bg-neo-yellow font-bold"
             />
           </div>
 
           <div>
+            <label className="block text-xl font-black uppercase tracking-widest mb-2">Pinpoint on Map</label>
+            <MapPicker onLocationSelect={(coords) => setCoordinates(coords)} />
+          </div>
+
+          <div className="pt-6">
             <label className="block font-bold mb-1">Upload a Photo (Optional but helpful)</label>
             {/* type="file" lets the user pick an image from their computer/phone */}
             <input 
