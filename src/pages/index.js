@@ -1,16 +1,49 @@
 import { useState, useEffect } from "react";
+import Head from "next/head";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, MessageSquare, Plus } from "lucide-react";
+import { ShieldAlert, Search, Plus, MapPin, Trophy, LogOut, MessageSquare } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { db } from "../lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
+import Link from "next/link";
 
 export default function Home() {
   const [showSplash, setShowSplash] = useState(true);
+  const { user, logout } = useAuth();
+  const [leaderboard, setLeaderboard] = useState([]);
 
-  // Auto-hide the splash screen after 2.5 seconds
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 2500);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    async function fetchLeaderboard() {
+      try {
+        const snapshot = await getDocs(collection(db, "foundItems"));
+        const userPoints = {};
+        
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          if (data.status === "resolved" && data.finderEmail) {
+            userPoints[data.finderEmail] = (userPoints[data.finderEmail] || 0) + 50;
+          }
+        });
+
+        const sorted = Object.keys(userPoints)
+          .map(email => ({ email, points: userPoints[email] }))
+          .sort((a, b) => b.points - a.points)
+          .slice(0, 3);
+
+        setLeaderboard(sorted);
+      } catch (err) {
+        console.error("Failed to fetch leaderboard", err);
+      }
+    }
+    
+    fetchLeaderboard();
   }, []);
 
   return (
@@ -42,7 +75,6 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* Main Dashboard - Visible after splash */}
       {!showSplash && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -50,41 +82,89 @@ export default function Home() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="p-6 max-w-5xl mx-auto"
         >
-          {/* Header */}
           <header className="flex justify-between items-center mb-10">
             <h1 className="text-3xl font-black uppercase tracking-tighter">
               <span className="bg-neo-pink px-2 py-1 neo-border">L&F</span> Board
             </h1>
-            <div className="flex gap-4">
-              <button className="bg-neo-blue px-4 py-2 font-bold neo-card hover:neo-card-hover flex items-center gap-2">
-                <Search size={20} /> Browse
-              </button>
-              <button className="bg-neo-green px-4 py-2 font-bold neo-card hover:neo-card-hover flex items-center gap-2">
-                <Plus size={20} /> Report Item
-              </button>
+            
+            <div className="flex gap-4 items-center">
+              {user ? (
+                <>
+                  <span className="font-bold border-b-2 border-black hidden sm:block">
+                    {user.email}
+                  </span>
+                  <button 
+                    onClick={logout}
+                    className="bg-red-400 px-4 py-2 font-bold neo-card hover:neo-card-hover flex items-center gap-2"
+                  >
+                    <LogOut size={20} /> Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="bg-neo-yellow px-4 py-2 font-bold neo-card hover:neo-card-hover">
+                    Log In
+                  </Link>
+                  <Link href="/signup" className="bg-neo-blue px-4 py-2 font-bold neo-card hover:neo-card-hover hidden sm:block">
+                    Sign Up
+                  </Link>
+                </>
+              )}
             </div>
           </header>
 
-          {/* Grid of features */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white neo-card hover:neo-card-hover p-8">
-              <div className="bg-neo-purple p-3 inline-block neo-border mb-4">
-                <MapPin size={32} />
+          <div className="flex gap-4 mb-10 flex-wrap">
+            <Link href="/browse" className="bg-neo-blue px-4 py-2 font-bold neo-card hover:neo-card-hover flex items-center gap-2">
+              <Search size={20} /> Browse Feed
+            </Link>
+            <Link href="/report-found" className="bg-neo-green px-4 py-2 font-bold neo-card hover:neo-card-hover flex items-center gap-2">
+              <Plus size={20} /> Found Something
+            </Link>
+            <Link href="/report-lost" className="bg-neo-pink px-4 py-2 font-bold neo-card hover:neo-card-hover flex items-center gap-2">
+              <Plus size={20} /> Lost Something
+            </Link>
+            <Link href="/inbox" className="bg-neo-purple px-4 py-2 font-bold neo-card hover:neo-card-hover flex items-center gap-2 text-white">
+              <MessageSquare size={20} /> My Inbox
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-neo-yellow p-6 neo-border neo-shadow">
+                <div className="bg-white p-3 inline-block neo-border mb-4">
+                  <ShieldAlert size={32} />
+                </div>
+                <h2 className="text-2xl font-black mb-2 uppercase">Secure & Verified</h2>
+                <p className="font-bold">Login with your student email to ensure a trusted campus environment.</p>
               </div>
-              <h3 className="text-2xl font-bold mb-2">Live Map View</h3>
-              <p className="text-lg font-medium text-gray-700">
-                Pinpoint exactly where items were lost or found on campus.
-              </p>
+
+              <div className="bg-neo-blue p-6 neo-border neo-shadow">
+                <div className="bg-white p-3 inline-block neo-border mb-4">
+                  <MapPin size={32} />
+                </div>
+                <h2 className="text-2xl font-black mb-2 uppercase">Interactive Maps</h2>
+                <p className="font-bold">Pinpoint exactly where you lost or found an item on the campus map.</p>
+              </div>
             </div>
-            
-            <div className="bg-white neo-card hover:neo-card-hover p-8">
-              <div className="bg-neo-pink p-3 inline-block neo-border mb-4">
-                <MessageSquare size={32} />
-              </div>
-              <h3 className="text-2xl font-bold mb-2">Real-time Chat</h3>
-              <p className="text-lg font-medium text-gray-700">
-                Instantly connect with the finder and arrange a safe meetup.
-              </p>
+
+            <div className="bg-white p-6 neo-border neo-shadow flex flex-col">
+              <h2 className="text-2xl font-black uppercase mb-4 flex items-center gap-2 border-b-4 border-black pb-2">
+                <Trophy size={28} className="text-neo-yellow" /> Trust Leaders
+              </h2>
+              {leaderboard.length === 0 ? (
+                <p className="font-bold text-gray-500 italic mt-4">No one has claimed points yet. Be the first!</p>
+              ) : (
+                <ul className="flex flex-col gap-4 mt-2">
+                  {leaderboard.map((leader, index) => (
+                    <li key={index} className="flex justify-between items-center bg-gray-50 border-2 border-black p-2 font-bold">
+                      <span className="truncate max-w-[150px]">{leader.email.split("@")[0]}</span>
+                      <span className="bg-neo-green px-2 py-1 border-2 border-black text-sm">
+                        {leader.points} PT
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         </motion.div>
