@@ -1,40 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# 🕵️‍♂️ Hackmatrix: Lost & Found
 
-## Getting Started
+Welcome to **Hackmatrix: Lost & Found**, the ultimate campus platform designed to seamlessly connect lost items with their rightful owners! Built for the fast-paced university environment, this application leverages cutting-edge technology and a vibrant design system to make recovering lost items as painless (and rewarding!) as possible.
 
-First, run the development server:
+## ✨ Vibe & Design
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Our aesthetic balances **clean Flat Design** with **trendy Neo-Brutalism**. 
+Expect bold typography, high-contrast borders, solid shadows, combined with modern, intuitive spacing.
+- **Animated Splash Screen:** Engaging entry point into the app.
+- **Vibrant & Bold:** Designed to keep students engaged and make the UI pop.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Core Features
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+- 🧠 **AI Image Matching:** Automatically match a found item with descriptions and photos of lost items, drastically reducing search time.
+- 🗺️ **Geolocation & Maps:** Pin exactly where an item was lost or found using interactive maps.
+- 💬 **Real-Time Chat:** Secure, instant communication between the finder and the owner to arrange a meetup.
+- 🔔 **Push Notifications & Alerts:** Never miss an update when a potential match is found.
+- 🏆 **Gamification (Reward Points):** Earn points and campus clout for every item you successfully return to its owner!
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+## 🛠️ Tech Stack
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+- **Frontend Framework:** Next.js (Pages Router / React)
+- **Styling:** CSS/Tailwind (Flat x Neo-brutalism theme)
+- **AI Integration:** Gemini Flash API for image description extraction and semantic matching.
+- **Backend & Database:** Firebase (Firestore, Auth, Storage, Real-time).
+- **Mapping:** Mapbox / Google Maps API for geolocation.
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📦 Getting Started
 
-## Learn More
+*(Instructions for local setup will be added here as development progresses)*
 
-To learn more about Next.js, take a look at the following resources:
+## 👨‍💻 About the Developers
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+We are a team of passionate first-year CSE B.Tech students building this project for the Hackmatrix hackathon! We're exploring new technologies like Next.js, Firebase, and Gemini AI, learning and collaborating as we build.

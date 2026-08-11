@@ -1,82 +1,94 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, MapPin, MessageSquare, Plus } from "lucide-react";
 
 export default function Home() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  // Auto-hide the splash screen after 2.5 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div
-      className={`${geistSans.variable} ${geistMono.variable} flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black`}
-    >
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              index.js
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-screen bg-neo-bg font-sans relative">
+      <AnimatePresence>
+        {showSplash && (
+          <motion.div
+            key="splash"
+            initial={{ y: 0 }}
+            exit={{ y: "-100%" }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-neo-yellow neo-border"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs/pages/getting-started?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, rotate: -10 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              transition={{ duration: 0.6, type: "spring", bounce: 0.5 }}
+              className="bg-white neo-card px-12 py-10 flex flex-col items-center justify-center"
+            >
+              <div className="text-6xl mb-4">🕵️‍♂️</div>
+              <h1 className="text-5xl font-black text-center tracking-tight mb-2 uppercase">
+                Hackmatrix
+              </h1>
+              <h2 className="text-2xl font-bold text-center bg-neo-blue px-3 py-1 neo-border">
+                Lost & Found
+              </h2>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Dashboard - Visible after splash */}
+      {!showSplash && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="p-6 max-w-5xl mx-auto"
+        >
+          {/* Header */}
+          <header className="flex justify-between items-center mb-10">
+            <h1 className="text-3xl font-black uppercase tracking-tighter">
+              <span className="bg-neo-pink px-2 py-1 neo-border">L&F</span> Board
+            </h1>
+            <div className="flex gap-4">
+              <button className="bg-neo-blue px-4 py-2 font-bold neo-card hover:neo-card-hover flex items-center gap-2">
+                <Search size={20} /> Browse
+              </button>
+              <button className="bg-neo-green px-4 py-2 font-bold neo-card hover:neo-card-hover flex items-center gap-2">
+                <Plus size={20} /> Report Item
+              </button>
+            </div>
+          </header>
+
+          {/* Grid of features */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-white neo-card hover:neo-card-hover p-8">
+              <div className="bg-neo-purple p-3 inline-block neo-border mb-4">
+                <MapPin size={32} />
+              </div>
+              <h3 className="text-2xl font-bold mb-2">Live Map View</h3>
+              <p className="text-lg font-medium text-gray-700">
+                Pinpoint exactly where items were lost or found on campus.
+              </p>
+            </div>
+            
+            <div className="bg-white neo-card hover:neo-card-hover p-8">
+              <div className="bg-neo-pink p-3 inline-block neo-border mb-4">
+                <MessageSquare size={32} />
+              </div>
+              <h3 className="text-2xl font-bold mb-2">Real-time Chat</h3>
+              <p className="text-lg font-medium text-gray-700">
+                Instantly connect with the finder and arrange a safe meetup.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
