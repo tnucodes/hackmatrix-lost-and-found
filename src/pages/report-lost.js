@@ -64,7 +64,8 @@ export default function ReportLost() {
         imageUrl = await compressImage(image);
       }
 
-      // 2. Save the text data + Base64 image directly to Firestore Database
+      // 2. Save to Firestore
+      const handshakeCode = Math.floor(1000 + Math.random() * 9000).toString();
       await addDoc(collection(db, "lostItems"), {
         title: title,
         description: description,
@@ -74,6 +75,7 @@ export default function ReportLost() {
         ownerEmail: user.email,
         ownerId: user.uid,
         status: "active",
+        handshakeCode: handshakeCode,
         createdAt: serverTimestamp() // Firebase automatically sets the exact time
       });
 

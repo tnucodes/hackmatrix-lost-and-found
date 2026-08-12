@@ -83,6 +83,7 @@ export default function ReportFound() {
       }
 
       // 3. Save to the "foundItems" collection in Firestore Database
+      const handshakeCode = Math.floor(1000 + Math.random() * 9000).toString();
       const docRef = await addDoc(collection(db, "foundItems"), {
         title,
         description,
@@ -94,6 +95,7 @@ export default function ReportFound() {
         finderId: user.uid,
         finderEmail: user.email,
         status: "active",
+        handshakeCode: handshakeCode,
         createdAt: serverTimestamp(),
       });
 

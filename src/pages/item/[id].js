@@ -14,10 +14,11 @@ export default function ItemDetails() {
   const router = useRouter();
   // We grab the dynamic 'id' and 'type' from the URL (e.g., /item/12345?type=lost)
   const { id, type } = router.query;
+  const { user } = useAuth();
   
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const [codeInput, setCodeInput] = useState("");
   
   // States for matching logic
   const [isMatching, setIsMatching] = useState(false);
@@ -89,13 +90,21 @@ export default function ItemDetails() {
     }
   };
 
-  const handleMarkResolved = async () => {
+  const handleVerifyHandshake = async () => {
+    if (codeInput !== item.handshakeCode) {
+      alert("Invalid Handshake Code!");
+      return;
+    }
+    
     try {
       const collectionName = type === "lost" ? "lostItems" : "foundItems";
       const docRef = doc(db, collectionName, item.id);
-      await updateDoc(docRef, { status: "resolved" });
-      setItem({ ...item, status: "resolved" });
-      alert("Item marked as resolved! You earned 50 Trust Points!");
+      await updateDoc(docRef, { 
+        status: "verified_resolved",
+        verifiedUserEmail: user.email 
+      });
+      setItem({ ...item, status: "verified_resolved", verifiedUserEmail: user.email });
+      alert("Verification successful! You both earned 50 Trust Points!");
     } catch (err) {
       console.error("Error updating status:", err);
     }
@@ -151,8 +160,8 @@ export default function ItemDetails() {
                 <span className={`px-3 py-1 font-black text-sm uppercase tracking-widest border-2 border-black ${type === 'lost' ? 'bg-neo-pink' : 'bg-neo-green'}`}>
                   {type}
                 </span>
-                <span className={`px-3 py-1 font-black text-sm uppercase tracking-widest border-2 border-black ${item.status === 'resolved' ? 'bg-neo-blue text-white' : 'bg-neo-yellow'}`}>
-                  {item.status === 'resolved' ? '✅ Resolved' : '🔴 Active'}
+                <span className={`px-3 py-1 font-black text-sm uppercase tracking-widest border-2 border-black ${item.status === 'verified_resolved' || item.status === 'resolved' ? 'bg-neo-blue text-white' : 'bg-neo-yellow'}`}>
+                  {item.status === 'verified_resolved' || item.status === 'resolved' ? '✅ Resolved' : '🔴 Active'}
                 </span>
               </div>
               <h2 className="text-4xl font-black uppercase tracking-tighter mb-2">{item.title}</h2>
@@ -198,19 +207,40 @@ export default function ItemDetails() {
               </div>
             )}
 
-            {/* Gamification Action */}
-            {user && (
-              (type === "found" && user.uid === item.finderId) ||
-              (type === "lost" && user.uid === item.ownerId)
-            ) && item.status !== "resolved" && (
-              <div className="bg-neo-yellow border-2 border-black p-4 mb-6 text-center">
-                <h3 className="font-black uppercase mb-2">Did this item find its home?</h3>
-                <button 
-                  onClick={handleMarkResolved}
-                  className="bg-black text-white px-6 py-3 font-black uppercase tracking-widest flex items-center justify-center gap-2 mx-auto hover:bg-gray-800"
-                >
-                  <Trophy size={20} className="text-neo-yellow" /> Mark as Resolved (+50 Trust Points)
-                </button>
+            {/* Gamification Action: Handshake Verification */}
+            {user && item.status !== "verified_resolved" && item.status !== "resolved" && (
+              <div className="bg-neo-yellow border-2 border-black p-6 mb-6 text-center">
+                <h3 className="font-black uppercase mb-4 text-2xl flex items-center justify-center gap-2">
+                  <Trophy className="text-black" /> Trust Point Verification
+                </h3>
+                
+                {/* User is the creator: Show their code */}
+                {((type === "found" && user.uid === item.finderId) || (type === "lost" && user.uid === item.ownerId)) ? (
+                  <div>
+                    <p className="font-bold mb-2">Give this code to the person you are exchanging this item with in person:</p>
+                    <div className="text-5xl font-black bg-white border-4 border-black p-4 inline-block tracking-[0.25em]">
+                      {item.handshakeCode || "0000"}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <p className="font-bold mb-2">Ask the poster for their 4-digit Handshake Code when you meet them:</p>
+                    <input 
+                      type="text" 
+                      maxLength={4}
+                      value={codeInput}
+                      onChange={(e) => setCodeInput(e.target.value)}
+                      placeholder="XXXX"
+                      className="text-center text-4xl font-black bg-white border-4 border-black p-4 w-48 mb-4 tracking-widest focus:outline-none focus:bg-neo-pink"
+                    />
+                    <button 
+                      onClick={handleVerifyHandshake}
+                      className="bg-black text-white px-6 py-3 font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-800 neo-button"
+                    >
+                      <Trophy size={20} className="text-neo-yellow" /> Verify & Claim Points
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             {item.status === "resolved" && (

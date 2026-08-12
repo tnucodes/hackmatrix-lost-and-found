@@ -22,15 +22,26 @@ export default function Home() {
   useEffect(() => {
     async function fetchLeaderboard() {
       try {
-        const snapshot = await getDocs(collection(db, "foundItems"));
+        const foundSnapshot = await getDocs(collection(db, "foundItems"));
+        const lostSnapshot = await getDocs(collection(db, "lostItems"));
+        
         const userPoints = {};
         
-        snapshot.docs.forEach(doc => {
-          const data = doc.data();
-          if (data.status === "resolved" && data.finderEmail) {
-            userPoints[data.finderEmail] = (userPoints[data.finderEmail] || 0) + 50;
+        const processDoc = (data, creatorEmailField) => {
+          if (data.status === "verified_resolved" || data.status === "resolved") {
+            // Give 50 points to the person who posted it
+            if (data[creatorEmailField]) {
+              userPoints[data[creatorEmailField]] = (userPoints[data[creatorEmailField]] || 0) + 50;
+            }
+            // Give 50 points to the person who verified the transaction
+            if (data.status === "verified_resolved" && data.verifiedUserEmail) {
+              userPoints[data.verifiedUserEmail] = (userPoints[data.verifiedUserEmail] || 0) + 50;
+            }
           }
-        });
+        };
+
+        foundSnapshot.docs.forEach(doc => processDoc(doc.data(), "finderEmail"));
+        lostSnapshot.docs.forEach(doc => processDoc(doc.data(), "ownerEmail"));
 
         const sorted = Object.keys(userPoints)
           .map(email => ({ email, points: userPoints[email] }))
