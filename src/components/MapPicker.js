@@ -31,16 +31,31 @@ export default function MapPicker({ onLocationSelect }) {
     }
   }
 
-  // Default center to a generic location, e.g., somewhere in India / New Delhi 
-  const defaultCenter = [28.6139, 77.2090]; 
+  // College campus location
+  const collegeCenter = [17.7100958, 83.1609111]; 
+  
+  // 1km bounds deviation (~0.009 latitude, ~0.0095 longitude)
+  const latDelta = 0.009;
+  const lngDelta = 0.0095;
+  const campusBounds = [
+    [17.7100958 - latDelta, 83.1609111 - lngDelta],
+    [17.7100958 + latDelta, 83.1609111 + lngDelta]
+  ];
 
   return (
     <div className="w-full relative neo-border neo-shadow bg-white z-0">
       <div className="bg-neo-blue p-2 font-bold uppercase text-sm border-b-4 border-black text-center">
-        {position ? "📍 Location Selected!" : "👇 Click on the map to drop a pin"}
+        {position ? "📍 Location Selected!" : "👇 Click on the campus map to drop a pin"}
       </div>
       <div style={{ height: '300px', width: '100%' }}>
-        <MapContainer center={defaultCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+        <MapContainer 
+          center={collegeCenter} 
+          zoom={16} 
+          minZoom={15}
+          maxBounds={campusBounds}
+          maxBoundsViscosity={1.0}
+          style={{ height: '100%', width: '100%' }}
+        >
           <TileLayer 
             attribution='&copy; OpenStreetMap contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 

@@ -11,12 +11,12 @@ Most campuses rely on WhatsApp groups and paper notices for lost & found. This a
 **Key Features:**
 - 🏠 **Unified Landing Page** — A premium, high-impact landing page featuring live campus stats, podium-style trust leaderboard, and illustrated guides.
 - 🏫 **Merged Search Feed** — Campus feed is embedded directly on the homepage, allowing quick keyword, location, and AI tag searches with active category switching.
-- 🕵️‍♂️ **Side-by-Side User Dashboard** — Logged-in students can view and manage their active lost/found reports side-by-side. Safe Handshake PIN codes are displayed directly on their dashboard cards for instant physical access.
+- 🕵️‍♂️ **Side-by-Side User Dashboard** — Logged-in students can view and manage their active lost/found reports side-by-side. Safe Handshake PIN codes are displayed directly on their dashboard Found cards for instant physical access.
 - 📸 **AI Image Analysis & Preview** — Upload a photo of a found item; Gemini Flash automatically describes it and extracts searchable tags. Drag-and-drop styling upload box displays live visual previews before submitting.
 - 🗺️ **Interactive Maps** — Drop a GPS pin when reporting; Leaflet displays the exact coordinates on the item details page.
 - 🤖 **Smart Matching** — Lost something? AI scans all found items and surfaces the most likely matches as premium suggested cards.
-- 🤝 **Passcode safe handovers** — Balanced item details page with a digital PIN verification pad for claimers. OTP matches verify handovers to award Trust Points.
-- 💬 **Integrated Chat Banner** — Direct messaging in-app with a parent metadata banner that displays item photos, status, and poster Handshake PIN codes directly inside the chat window.
+- 🤝 **Passcode safe handovers** — Balanced item details page with a digital PIN verification pad for claimers on Found items. OTP matches verify handovers to award Trust Points.
+- 💬 **Integrated Chat Banner** — Direct messaging in-app with a parent metadata banner that displays item status and finder Handshake PIN codes directly inside the chat window.
 
 ---
 
@@ -48,7 +48,7 @@ src/
 ├── pages/
 │   ├── index.js              # Dashboard: landing page, live stats, side-by-side user dashboard, unified feed with search
 │   ├── browse.js             # Feed view with aligned search, category filters, and premium cards
-│   ├── report-lost.js        # Lost form (dashed upload box, live preview, MapPicker, secure code)
+│   ├── report-lost.js        # Lost form (2-step card wizard with location text description and optional photo)
 │   ├── report-found.js       # Found form (dashed upload, live preview, Gemini image scan, MapPicker)
 │   ├── inbox.js              # Inbox hub: chat cards with dates, badges, and user tags
 │   ├── login.js              # Polished login page with responsive inputs and custom borders
@@ -173,6 +173,9 @@ This enables the **Inbox** page to query `where("participants", "array-contains"
 | Chat input bar required scrolling to reach | Root div was `min-h-screen` which grew with content | Changed to `h-screen overflow-hidden` with internal scroll on message list |
 | Flat buttons and no click states | `neo-button` class was used across pages but omitted from globals.css | Defined `@utility neo-button` in CSS with hover/active translations |
 | Unbalanced item detail columns | Left column held only details image, causing right column to overflow vertically | Stacked image + Leaflet map on the left, and details + PIN safe on the right |
+| Lost description enclosed in AI analysis box | Detail page rendered AI box whenever `aiDescription` was present, which was prefilled on lost reports | Restricted AI card rendering in `item/[id].js` to found items only (`type === "found"`) |
+| Lost status stuck as active after found verification | Handshake verification completed on a found item, but the related lost report remained active | Passed `matchedLostId` in suggestions links, and queried active reports as a fallback in verification |
+| Duplicate description on details page | Detailed Description and AI Vision cards showed the same text when pre-fills were unedited | Modified `item/[id].js` to only render the AI text if it differs from the user's manual description |
 
 ---
 

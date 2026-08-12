@@ -136,19 +136,35 @@ export default function ChatRoom() {
           <div className="flex items-center gap-2">
             <Trophy size={16} className="text-black shrink-0" />
             <span>
-              {isCreator ? (
-                <>Give this PIN to the claimer when meeting: <strong className="font-mono bg-white px-1.5 py-0.5 border border-black">{itemMeta.handshakeCode}</strong></>
+              {itemMeta.type === "found" ? (
+                isCreator ? (
+                  <>Give this PIN to the owner when meeting: <strong className="font-mono bg-white px-1.5 py-0.5 border border-black">{itemMeta.handshakeCode}</strong></>
+                ) : (
+                  <>Meet the finder and ask for their 4-digit Handshake Code to verify return & get points.</>
+                )
               ) : (
-                <>Meet the poster and ask for their 4-digit code to confirm return & get points.</>
+                isCreator ? (
+                  <>Coordinate with the finder to retrieve your item. Once they report it as found, verify the exchange using their found report PIN.</>
+                ) : (
+                  <>If you found this item, report it to generate a secure Handshake PIN, or coordinate details here.</>
+                )
               )}
             </span>
           </div>
-          {!isCreator && (
+          {itemMeta.type === "found" && !isCreator && (
             <Link 
-              href={`/item/${itemMeta.id}?type=${itemMeta.type}`}
+              href={`/item/${itemMeta.id}?type=found`}
               className="bg-black text-white px-2 py-1 text-[10px] font-black uppercase tracking-wide shrink-0 border border-black hover:bg-gray-800"
             >
               Verify Code &rarr;
+            </Link>
+          )}
+          {itemMeta.type === "lost" && !isCreator && (
+            <Link 
+              href="/report-found"
+              className="bg-black text-white px-2 py-1 text-[10px] font-black uppercase tracking-wide shrink-0 border border-black hover:bg-gray-800"
+            >
+              Report Found &rarr;
             </Link>
           )}
         </div>

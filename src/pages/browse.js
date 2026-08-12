@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { db } from "../lib/firebase";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Search, MapPin, Calendar, ArrowLeft, AlertTriangle } from "lucide-react";
@@ -12,34 +12,45 @@ export default function Browse() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    async function fetchItems() {
-      try {
-        // Fetch Lost Items
-        const lostQuery = query(collection(db, "lostItems"), orderBy("createdAt", "desc"));
-        const lostSnapshot = await getDocs(lostQuery);
-        const lostData = lostSnapshot.docs.map(doc => ({ id: doc.id, type: "lost", ...doc.data() }));
+    setLoading(true);
+    let foundData = [];
+    let lostData = [];
 
-        // Fetch Found Items
-        const foundQuery = query(collection(db, "foundItems"), orderBy("createdAt", "desc"));
-        const foundSnapshot = await getDocs(foundQuery);
-        const foundData = foundSnapshot.docs.map(doc => ({ id: doc.id, type: "found", ...doc.data() }));
+    const updateItemsList = () => {
+      // Combine and sort by date (newest first)
+      const combined = [...lostData, ...foundData].sort((a, b) => {
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+        return timeB - timeA;
+      });
 
-        // Combine and sort by date (newest first)
-        const combined = [...lostData, ...foundData].sort((a, b) => {
-          const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
-          const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
-          return timeB - timeA;
-        });
+      setItems(combined);
+      setLoading(false);
+    };
 
-        setItems(combined);
-      } catch (err) {
-        console.error("Error fetching items:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
+    const foundQuery = query(collection(db, "foundItems"), orderBy("createdAt", "desc"));
+    const lostQuery = query(collection(db, "lostItems"), orderBy("createdAt", "desc"));
 
-    fetchItems();
+    const unsubFound = onSnapshot(foundQuery, (snapshot) => {
+      foundData = snapshot.docs.map(doc => ({ id: doc.id, type: "found", ...doc.data() }));
+      updateItemsList();
+    }, (err) => {
+      console.error("Found subscription failed:", err);
+      setLoading(false);
+    });
+
+    const unsubLost = onSnapshot(lostQuery, (snapshot) => {
+      lostData = snapshot.docs.map(doc => ({ id: doc.id, type: "lost", ...doc.data() }));
+      updateItemsList();
+    }, (err) => {
+      console.error("Lost subscription failed:", err);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubFound();
+      unsubLost();
+    };
   }, []);
 
   const filteredItems = items.filter(item => {

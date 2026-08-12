@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../lib/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, onSnapshot } from "firebase/firestore";
 import Link from "next/link";
 
 export default function Home() {
@@ -29,60 +29,70 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    async function fetchDashboardData() {
-      try {
-        setLoadingItems(true);
-        const foundSnapshot = await getDocs(collection(db, "foundItems"));
-        const lostSnapshot = await getDocs(collection(db, "lostItems"));
-        
-        const foundData = foundSnapshot.docs.map(doc => ({ id: doc.id, type: "found", ...doc.data() }));
-        const lostData = lostSnapshot.docs.map(doc => ({ id: doc.id, type: "lost", ...doc.data() }));
-        
-        // Combine and sort by date (newest first)
-        const combined = [...lostData, ...foundData].sort((a, b) => {
-          const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
-          const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
-          return timeB - timeA;
-        });
-        
-        setAllItems(combined);
-        
-        // Calculate Stats
-        const activeCount = combined.filter(item => item.status === "active").length;
-        const resolvedCount = combined.filter(item => item.status === "verified_resolved" || item.status === "resolved").length;
-        const totalPointsAwarded = resolvedCount * 100;
-        setStats({ active: activeCount, resolved: resolvedCount, points: totalPointsAwarded });
-        
-        // Calculate Leaderboard
-        const userPoints = {};
-        const processDoc = (data, creatorEmailField) => {
-          if (data.status === "verified_resolved" || data.status === "resolved") {
-            if (data[creatorEmailField]) {
-              userPoints[data[creatorEmailField]] = (userPoints[data[creatorEmailField]] || 0) + 50;
-            }
-            if (data.status === "verified_resolved" && data.verifiedUserEmail) {
-              userPoints[data.verifiedUserEmail] = (userPoints[data.verifiedUserEmail] || 0) + 50;
-            }
+    setLoadingItems(true);
+    let foundData = [];
+    let lostData = [];
+
+    const updateCombinedData = () => {
+      // Combine and sort by date (newest first)
+      const combined = [...lostData, ...foundData].sort((a, b) => {
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+        return timeB - timeA;
+      });
+      
+      setAllItems(combined);
+      
+      // Calculate Stats
+      const activeCount = combined.filter(item => item.status === "active").length;
+      const resolvedCount = combined.filter(item => item.status === "verified_resolved" || item.status === "resolved").length;
+      const totalPointsAwarded = resolvedCount * 100;
+      setStats({ active: activeCount, resolved: resolvedCount, points: totalPointsAwarded });
+      
+      // Calculate Leaderboard
+      const userPoints = {};
+      const processDoc = (data, creatorEmailField) => {
+        if (data.status === "verified_resolved" || data.status === "resolved") {
+          if (data[creatorEmailField]) {
+            userPoints[data[creatorEmailField]] = (userPoints[data[creatorEmailField]] || 0) + 50;
           }
-        };
+          if (data.status === "verified_resolved" && data.verifiedUserEmail) {
+            userPoints[data.verifiedUserEmail] = (userPoints[data.verifiedUserEmail] || 0) + 50;
+          }
+        }
+      };
 
-        foundData.forEach(item => processDoc(item, "finderEmail"));
-        lostData.forEach(item => processDoc(item, "ownerEmail"));
+      foundData.forEach(item => processDoc(item, "finderEmail"));
+      lostData.forEach(item => processDoc(item, "ownerEmail"));
 
-        const sorted = Object.keys(userPoints)
-          .map(email => ({ email, points: userPoints[email] }))
-          .sort((a, b) => b.points - a.points)
-          .slice(0, 4);
+      const sorted = Object.keys(userPoints)
+        .map(email => ({ email, points: userPoints[email] }))
+        .sort((a, b) => b.points - a.points)
+        .slice(0, 4);
 
-        setLeaderboard(sorted);
-      } catch (err) {
-        console.error("Failed to fetch dashboard data", err);
-      } finally {
-        setLoadingItems(false);
-      }
-    }
-    
-    fetchDashboardData();
+      setLeaderboard(sorted);
+      setLoadingItems(false);
+    };
+
+    // Subscriptions
+    const unsubFound = onSnapshot(collection(db, "foundItems"), (snapshot) => {
+      foundData = snapshot.docs.map(doc => ({ id: doc.id, type: "found", ...doc.data() }));
+      updateCombinedData();
+    }, (err) => {
+      console.error("Found listener failed", err);
+    });
+
+    const unsubLost = onSnapshot(collection(db, "lostItems"), (snapshot) => {
+      lostData = snapshot.docs.map(doc => ({ id: doc.id, type: "lost", ...doc.data() }));
+      updateCombinedData();
+    }, (err) => {
+      console.error("Lost listener failed", err);
+    });
+
+    return () => {
+      unsubFound();
+      unsubLost();
+    };
   }, [user]);
 
   // Split user items dynamically
@@ -280,13 +290,6 @@ export default function Home() {
                               </span>
                               <h5 className="font-black uppercase truncate text-base leading-tight">{item.title}</h5>
                               <p className="text-xs text-gray-500 font-bold mt-1">📍 {item.location}</p>
-                              
-                              {item.status === 'active' && (
-                                <div className="mt-2 inline-flex items-center gap-1.5 bg-white px-2 py-1 border-2 border-black text-xs font-bold font-mono shadow-[2px_2px_0_#000]">
-                                  <span>HANDSHAKE PIN:</span>
-                                  <span className="bg-neo-yellow px-1">{item.handshakeCode || "0000"}</span>
-                                </div>
-                              )}
                             </div>
                             <Link href={`/item/${item.id}?type=lost`} className="bg-neo-blue py-2 px-3 text-xs font-black uppercase neo-button shrink-0 text-center">
                               Details

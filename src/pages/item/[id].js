@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { db } from "../../lib/firebase";
-import { doc, getDoc, collection, getDocs, query, updateDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, updateDoc, setDoc, where, onSnapshot } from "firebase/firestore";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { MessageSquare, MapPin, Sparkles, Trophy, ArrowLeft, ShieldCheck, Mail, Calendar } from "lucide-react";
@@ -12,7 +12,7 @@ const MapDisplay = dynamic(() => import("../../components/MapDisplay"), { ssr: f
 
 export default function ItemDetails() {
   const router = useRouter();
-  const { id, type } = router.query;
+  const { id, type, matchedLostId } = router.query;
   const { user } = useAuth();
   
   const [item, setItem] = useState(null);
@@ -27,25 +27,22 @@ export default function ItemDetails() {
   useEffect(() => {
     if (!id || !type) return;
 
-    async function fetchItem() {
-      try {
-        const collectionName = type === "lost" ? "lostItems" : "foundItems";
-        const docRef = doc(db, collectionName, id);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          setItem({ id: docSnap.id, ...docSnap.data() });
-        } else {
-          console.log("No such document!");
-        }
-      } catch (error) {
-        console.error("Error fetching document:", error);
-      } finally {
-        setLoading(false);
+    const collectionName = type === "lost" ? "lostItems" : "foundItems";
+    const docRef = doc(db, collectionName, id);
+    
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setItem({ id: docSnap.id, ...docSnap.data() });
+      } else {
+        console.log("No such document!");
       }
-    }
+      setLoading(false);
+    }, (error) => {
+      console.error("Error listening to document:", error);
+      setLoading(false);
+    });
 
-    fetchItem();
+    return () => unsubscribe();
   }, [id, type]);
 
   const handleFindMatches = async () => {
@@ -96,11 +93,53 @@ export default function ItemDetails() {
     try {
       const collectionName = type === "lost" ? "lostItems" : "foundItems";
       const docRef = doc(db, collectionName, item.id);
+      
+      // 1. Update this document
       await updateDoc(docRef, { 
         status: "verified_resolved",
-        verifiedUserEmail: user.email 
+        verifiedUserEmail: user.email,
+        verifiedUserId: user.uid
       });
       setItem({ ...item, status: "verified_resolved", verifiedUserEmail: user.email });
+
+      // 2. Cross-resolve the lost item (if verifying a found item)
+      if (type === "found") {
+        let resolvedLostId = matchedLostId;
+
+        // Fallback: If not passed in query, search for active lost items owned by this claimant
+        if (!resolvedLostId && user) {
+          try {
+            const lostSnapshot = await getDocs(
+              query(
+                collection(db, "lostItems"), 
+                where("ownerId", "==", user.uid),
+                where("status", "==", "active")
+              )
+            );
+            if (!lostSnapshot.empty) {
+              resolvedLostId = lostSnapshot.docs[0].id;
+            }
+          } catch (qErr) {
+            console.error("Error querying lost items:", qErr);
+          }
+        }
+
+        if (resolvedLostId) {
+          const lostRef = doc(db, "lostItems", resolvedLostId);
+          await updateDoc(lostRef, {
+            status: "verified_resolved",
+            verifiedUserEmail: item.finderEmail || "Finder",
+            verifiedUserId: item.finderId || "",
+            matchedFoundId: item.id
+          });
+          
+          // Link foundItem back to the resolved lostItem
+          await updateDoc(docRef, {
+            matchedLostId: resolvedLostId
+          });
+        }
+      }
+
       alert("Verification successful! You both earned 50 Trust Points!");
     } catch (err) {
       console.error("Error updating status:", err);
@@ -158,28 +197,30 @@ export default function ItemDetails() {
               )}
             </div>
 
-            {/* Map Box */}
-            <div className="p-4 flex-grow flex flex-col justify-end">
-              <h3 className="font-black uppercase text-xs text-gray-500 mb-2 flex items-center gap-1.5">
-                <MapPin size={14} className="text-black" /> Pinpoint Location
-              </h3>
-              {item.coordinates ? (
-                <div className="bg-white border-2 border-black p-1 relative z-0 shadow-[2px_2px_0_#000]">
-                  <MapDisplay lat={item.coordinates.lat} lng={item.coordinates.lng} />
-                </div>
-              ) : (
-                <div className="bg-white border-2 border-black p-1 relative z-0 shadow-[2px_2px_0_#000]">
-                  <iframe 
-                    width="100%" 
-                    height="200" 
-                    style={{ border: 0 }} 
-                    loading="lazy" 
-                    allowFullScreen 
-                    src={`https://maps.google.com/maps?q=${encodeURIComponent(item.location)}&output=embed`}
-                  ></iframe>
-                </div>
-              )}
-            </div>
+            {/* Map Box - Only for Found Items */}
+            {type === "found" && (
+              <div className="p-4 flex-grow flex flex-col justify-end">
+                <h3 className="font-black uppercase text-xs text-gray-500 mb-2 flex items-center gap-1.5">
+                  <MapPin size={14} className="text-black" /> Pinpoint Location
+                </h3>
+                {item.coordinates ? (
+                  <div className="bg-white border-2 border-black p-1 relative z-0 shadow-[2px_2px_0_#000]">
+                    <MapDisplay lat={item.coordinates.lat} lng={item.coordinates.lng} />
+                  </div>
+                ) : (
+                  <div className="bg-white border-2 border-black p-1 relative z-0 shadow-[2px_2px_0_#000]">
+                    <iframe 
+                      width="100%" 
+                      height="200" 
+                      style={{ border: 0 }} 
+                      loading="lazy" 
+                      allowFullScreen 
+                      src={`https://maps.google.com/maps?q=${encodeURIComponent(item.location)}&output=embed`}
+                    ></iframe>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right Column: Detailed Descriptions & Interactive Panels */}
@@ -202,19 +243,31 @@ export default function ItemDetails() {
               </p>
             
               {/* Description box */}
-              <div className="bg-gray-50 border-3 border-black p-4 mb-6 shadow-[3px_3px_0_#000]">
+              <div className="bg-gray-50 border-3 border-black p-4 mb-4 shadow-[3px_3px_0_#000]">
                 <h3 className="font-black uppercase text-xs text-gray-500 mb-2">Detailed Description</h3>
                 <p className="font-bold text-base leading-relaxed text-gray-800">{item.description}</p>
               </div>
 
-              {/* Gemini AI Auto description card */}
-              {item.aiDescription && (
+              {/* Location Description box */}
+              <div className="bg-gray-50 border-3 border-black p-4 mb-6 shadow-[3px_3px_0_#000]">
+                <h3 className="font-black uppercase text-xs text-gray-500 mb-2">
+                  {type === "lost" ? "Last Seen Location" : "Found Location Details"}
+                </h3>
+                <p className="font-bold text-base leading-relaxed text-gray-800">{item.location}</p>
+              </div>
+
+              {/* Gemini AI Auto description card - ONLY for Found Items */}
+              {type === "found" && (item.aiDescription || (item.aiTags && item.aiTags.length > 0)) && (
                 <div className="bg-neo-bg border-3 border-black p-4 mb-6 relative shadow-[3px_3px_0_#000]">
                   <div className="absolute -top-3.5 -right-3.5 text-2xl animate-bounce">✨</div>
                   <h3 className="font-black uppercase text-xs text-neo-pink mb-2 flex items-center gap-1">
                     <Sparkles size={14} className="fill-neo-pink text-neo-pink" /> AI Vision Analysis (Gemini Flash)
                   </h3>
-                  <p className="font-bold text-sm leading-relaxed text-gray-700 mb-3">{item.aiDescription}</p>
+                  
+                  {/* Render the AI description only if it differs from the user-entered description */}
+                  {item.aiDescription && item.aiDescription !== item.description && (
+                    <p className="font-bold text-sm leading-relaxed text-gray-700 mb-3">{item.aiDescription}</p>
+                  )}
                   
                   {item.aiTags && item.aiTags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
@@ -228,8 +281,8 @@ export default function ItemDetails() {
                 </div>
               )}
 
-              {/* Secure verification module (Passcode Terminal) */}
-              {user && item.status !== "verified_resolved" && item.status !== "resolved" && (
+              {/* Secure verification module (Passcode Terminal) - ONLY for Found Items */}
+              {type === "found" && user && item.status !== "verified_resolved" && item.status !== "resolved" && (
                 <div className="bg-neo-yellow border-3 border-black p-5 mb-6 text-center shadow-[4px_4px_0_#000]">
                   <h3 className="font-black uppercase mb-3 text-lg flex items-center justify-center gap-2 border-b-2 border-black pb-2">
                     <Trophy className="text-black" size={20} /> Secure Exchange Verification
@@ -237,14 +290,14 @@ export default function ItemDetails() {
                   
                   {isCreator ? (
                     <div>
-                      <p className="text-xs font-bold mb-2">Give this secure 4-digit code to the other student when you meet in-person to return the item:</p>
+                      <p className="text-xs font-bold mb-2">Give this secure 4-digit code to the owner when you meet in-person to return the item:</p>
                       <div className="text-4xl font-black bg-white border-4 border-black py-2 px-6 inline-block font-mono tracking-widest text-neo-pink shadow-[2px_2px_0_#000]">
                         {item.handshakeCode || "0000"}
                       </div>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
-                      <p className="text-xs font-bold mb-3">Meet the poster and ask them for the 4-digit Handshake Code to claim points:</p>
+                      <p className="text-xs font-bold mb-3">Meet the finder and ask them for the 4-digit Handshake Code to verify return:</p>
                       <input 
                         type="text" 
                         maxLength={4}
@@ -260,6 +313,76 @@ export default function ItemDetails() {
                         <ShieldCheck size={16} className="text-neo-yellow" /> Verify PIN & Resolve Return
                       </button>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* Smart Matcher Card - ONLY for Lost Items (Visible to Owner) */}
+              {type === "lost" && isCreator && item.status !== "verified_resolved" && item.status !== "resolved" && (
+                <div className="bg-neo-yellow border-3 border-black p-5 mb-6 shadow-[4px_4px_0_#000]">
+                  <h3 className="font-black uppercase mb-3 text-lg flex items-center justify-center gap-2 border-b-2 border-black pb-2">
+                    <Sparkles className="text-black" size={20} /> Smart AI Matches
+                  </h3>
+                  <p className="font-bold text-xs text-gray-700 mb-4">
+                    Scan our campus database of found items. Gemini AI analyzes details to suggest matches.
+                  </p>
+                  <button 
+                    onClick={handleFindMatches}
+                    disabled={isMatching}
+                    className="bg-neo-pink px-4 py-2.5 text-xs font-black uppercase neo-button flex items-center gap-2 mb-4 w-full shadow-[2px_2px_0_#000]"
+                  >
+                    <Sparkles size={16} />
+                    {isMatching ? "Scanning Campus Records..." : "Run Smart Scan"}
+                  </button>
+
+                  {/* Match Results inline */}
+                  {hasSearchedMatches && matches.length === 0 && (
+                    <div className="bg-gray-100 p-3 border-2 border-black text-xs font-bold text-center text-gray-500 italic">
+                      No matches found yet. We'll alert you if someone reports finding it.
+                    </div>
+                  )}
+
+                  {matches.length > 0 && (
+                    <div className="flex flex-col gap-3 max-h-[240px] overflow-y-auto pr-1 mt-2">
+                      {matches.map(match => (
+                        <Link href={`/item/${match.id}?type=found&matchedLostId=${id}`} key={match.id}>
+                          <div className="bg-white border-2 border-black p-3 flex gap-3 hover:bg-gray-50 transition-all cursor-pointer group shadow-[2px_2px_0_#000]">
+                            <div className="w-14 h-14 bg-gray-200 border border-black shrink-0 overflow-hidden relative">
+                               {match.imageUrl && <img src={match.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-[8px] bg-neo-green font-black px-1.5 py-0.5 border border-black uppercase tracking-widest inline-block mb-1 shadow-[1px_1px_0_#000]">
+                                AI SUGGESTION
+                              </span>
+                              <h4 className="font-black uppercase truncate text-xs leading-tight">{match.title}</h4>
+                              <p className="text-[9px] font-bold text-gray-500 mt-0.5 flex items-center gap-0.5">
+                                📍 {match.location}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Helper Info for Lost Items (Viewer view) */}
+              {type === "lost" && !isCreator && item.status !== "verified_resolved" && item.status !== "resolved" && (
+                <div className="bg-neo-blue border-3 border-black p-5 mb-6 shadow-[4px_4px_0_#000]">
+                  <h3 className="font-black uppercase mb-3 text-lg flex items-center justify-center gap-2 border-b-2 border-black pb-2 text-black">
+                    <ShieldCheck size={20} /> Found This Item?
+                  </h3>
+                  <p className="text-xs font-bold mb-3 leading-relaxed text-black">
+                    If you have found this item, start a secure chat with the owner to coordinate returning it, or report it as found to generate a secure Handshake PIN.
+                  </p>
+                  {user && (
+                    <button 
+                      onClick={handleStartChat}
+                      className="w-full bg-black text-white py-2.5 px-4 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-gray-800 neo-button"
+                    >
+                      <MessageSquare size={16} /> Contact Owner
+                    </button>
                   )}
                 </div>
               )}
@@ -292,61 +415,6 @@ export default function ItemDetails() {
             </div>
           </div>
         </motion.div>
-
-        {/* AI Matcher Section (Only for Lost Items) */}
-        {type === "lost" && (
-          <div className="mt-10 mb-20">
-            <h2 className="text-2xl font-black uppercase tracking-tighter mb-4 bg-neo-yellow inline-block px-3 py-1 neo-border">
-              🤖 Smart AI Matches
-            </h2>
-            <div className="bg-white neo-card p-6 border-4 border-black shadow-[6px_6px_0_#000]">
-              <p className="font-bold text-sm text-gray-700 mb-4">
-                Scan our campus database of found items. Gemini AI analyzes details and photos to suggest matches.
-              </p>
-              <button 
-                onClick={handleFindMatches}
-                disabled={isMatching}
-                className="bg-neo-pink px-5 py-3 text-xs font-black uppercase neo-button flex items-center gap-2 mb-6"
-              >
-                <Sparkles size={16} />
-                {isMatching ? "Scanning Campus Records..." : "Run Smart Scan"}
-              </button>
-
-              {/* Match Results */}
-              {hasSearchedMatches && matches.length === 0 && (
-                <div className="bg-gray-100 p-4 border-3 border-black font-bold text-center text-gray-500 italic">
-                  No matches found on campus yet. We'll automatically suggest matches when new found items arrive.
-                </div>
-              )}
-
-              {matches.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {matches.map(match => (
-                    <Link href={`/item/${match.id}?type=found`} key={match.id}>
-                      <div className="bg-white neo-card p-4 flex gap-4 hover:bg-gray-50 transition-all cursor-pointer group hover:neo-card-hover border-3 border-black">
-                        <div className="w-20 h-20 bg-gray-200 border-2 border-black shrink-0 overflow-hidden relative">
-                           {match.imageUrl && <img src={match.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
-                        </div>
-                        <div className="min-w-0">
-                          <span className="text-[8px] bg-neo-green font-black px-1.5 py-0.5 border border-black uppercase tracking-widest inline-block mb-1 shadow-[1px_1px_0_#000]">
-                            AI SUGGESTION
-                          </span>
-                          <h4 className="font-black uppercase truncate text-sm leading-tight">{match.title}</h4>
-                          <p className="text-[10px] font-bold text-gray-500 mt-1 flex items-center gap-0.5">
-                            📍 {match.location}
-                          </p>
-                          <div className="text-[9px] bg-black text-white font-black px-1.5 py-0.5 inline-block mt-2">
-                            {match.aiTags ? `#${match.aiTags[0]}` : "#match"}
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

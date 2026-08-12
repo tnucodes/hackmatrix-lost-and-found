@@ -217,10 +217,18 @@ Points are called **"Trust Points"** (not "Hackmatrix Points" — renamed to bet
 - **Interactive Button Utility:** Defined the `@utility neo-button` class in `globals.css` with native CSS nesting. Hovering translates the button up-left and enlarges the hard black shadow; clicking translates it down-right with a smaller shadow, giving a tactile micro-animation feel.
 - **Unified Landing Page:** Rewrote `src/pages/index.js` as a full landing page. It now features stats counters (active alerts, resolved returns, points awarded), a step-by-step campus trust loop explanation, and a formatted podium-style leaderboard with badges.
 - **Unified Feed & Search:** Replaced the separate browse link with an embedded search feed directly on the Home page. Users can query keywords, locations, or AI tags and filter by category (All / Lost / Found) without leaving the dashboard.
-- **Side-by-Side User Dashboard:** Added a special dashboard visible only to logged-in users on the Home page. It splits their active reports into "My Lost" and "My Found" side-by-side, displaying their current status and Handshake PIN codes directly on the cards for easy in-person reference.
+- **Side-by-Side User Dashboard:** Added a special dashboard visible only to logged-in users on the Home page. It splits their active reports into "My Lost" and "My Found" side-by-side, displaying their current status, and Handshake PIN codes directly on the Found cards for easy reference.
 - **Visual Image Upload Previews:** Added a custom dashed upload container in the reporting pages. Selecting an image displays a neat thumbnail with a shadow and an option to remove the upload before submitting.
-- **Passcode Safe Terminal UI:** Balanced `item/[id].js` into a 2-column layout (left: photo + Leaflet map; right: text + interactions). Styled the Handshake verification box as a numeric PIN entry pad for claimers.
-- **Contextual Chat Room Banners:** Added a live banner at the top of the chat room in `chat/[id].js` that retrieves parent metadata. If active, it reminds posters of their Handshake PIN and instructs claimers on how to obtain it.
+- **Passcode Safe Terminal UI:** Balanced `item/[id].js` into a 2-column layout (left: photo + Leaflet map; right: text + interactions). Styled the Handshake verification box as a numeric PIN entry pad for claimers on Found items.
+- **Contextual Chat Room Banners:** Added a live banner at the top of the chat room in `chat/[id].js` that retrieves parent metadata. If active, it reminds finders of their Handshake PIN and guides claimers on entering it.
+- **Simplified OTP Verification Flow:** Refactored PIN verification to occur exclusively on **Found Items** (since lost items don't have a finder to verify with on their own page).
+- **Moved Up Smart Matcher:** Moved the Smart Matcher UI (for Lost items) from the bottom of the page directly up into the details column, rendering scans and suggest list items inline.
+- **Conversational 2-Step Lost Wizard:** Refactored the Lost report form to remove the interactive map picker, converting it into a clean 2-step card wizard for simplified lost alerts.
+- **Detailed Location Cards:** Added a dedicated "Last Seen Location" (for lost items) and "Found Location Details" (for found items) card on the details page to ensure detailed text locations are prominent and readable.
+- **Form Submission Redirects:** Re-routed report submissions in `report-lost.js` and `report-found.js` to immediately direct the user to their newly created item's details page instead of taking them back to the homepage.
+- **Conversational 2-Step Found Wizard:** Converted the Found reporting form (`report-found.js`) into a clean 2-step card wizard. Step 1 handles photo uploads, immediately auto-triggering the Gemini AI scan in the background to pre-fill details and store the exact image summary in `aiDescription`. Step 2 handles found location descriptions and campus map coordinate drops.
+- **Campus Map Constraints:** Configured `MapPicker.js` default coordinates to lock onto the college campus `(17.7100958, 83.1609111)`, setting rigid dragging bounds of 1km and zoom level constraints (`zoom={16}`, `minZoom={15}`).
+- **Real-Time Firestore Listeners:** Converted all static data fetching (`getDocs`, `getDoc`) on the home page (`index.js`), standalone feed (`browse.js`), and details pages (`item/[id].js`) into live subscriptions using Firestore's `onSnapshot` listener. Status updates (such as claiming or verification resolves) propagate in real-time across users without page reloads.
 
 ---
 
@@ -236,6 +244,9 @@ Points are called **"Trust Points"** (not "Hackmatrix Points" — renamed to bet
 | 6 | Messages didn't auto-scroll | User had to manually scroll down after each message | No scroll logic implemented | Added `useRef` + `scrollIntoView` triggered by `useEffect` on `messages` state |
 | 7 | `neo-button` felt flat/plain | Buttons using `neo-button` class had no border, shadow, or hover state | Omitted CSS definition in design tokens | Defined `@utility neo-button` in `globals.css` with hover/active translates |
 | 8 | Balanced detail column sizing | Item pages had extremely long right columns and tiny left columns | Left column only held the image while maps and details stacked on the right | Split layout so image + Leaflet map sit on the left, and details + actions sit on the right |
+| 9 | Lost description shown as AI scan | Manual description of lost items was enclosed in "AI Vision Analysis" banner | Details page rendered AI box whenever `aiDescription` was present, which was prefilled on lost reports | Restricted AI card rendering in `item/[id].js` to `type === "found"` |
+| 10 | Lost status stuck as active | Verifying a found item successfully did not update the corresponding lost report's status | No reference linking the found verification trigger back to the matching lost report | Passed `matchedLostId` in suggestions links, and queried active reports as a fallback in verification |
+| 11 | Duplicate description shown | AI Vision card and Detailed Description card showed identical text if pre-fills were unedited | Both values were stored identically upon submission, and details page rendered both unconditionally | Conditionally rendered `aiDescription` only if it differs from `description`, rendering tags only if they are identical |
 
 ---
 
