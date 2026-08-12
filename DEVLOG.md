@@ -208,6 +208,22 @@ Points are called **"Trust Points"** (not "Hackmatrix Points" — renamed to bet
 
 ---
 
+## Phase 8 — UI/UX Overhaul & Dashboard Unification
+
+**Goal:** Turn a functional yet plain layout into a premium, state-of-the-art hackathon interface (comparable to Lovable.app outputs) and resolve navigation pain points.
+
+### What was built:
+- **Typography & Font pairing:** Loaded Google Fonts `Space Grotesk` (for heavy, brutalist headings) and `Plus Jakarta Sans` (for readable, modern body copy) via preconnect links in `_document.js` and set them in `globals.css`.
+- **Interactive Button Utility:** Defined the `@utility neo-button` class in `globals.css` with native CSS nesting. Hovering translates the button up-left and enlarges the hard black shadow; clicking translates it down-right with a smaller shadow, giving a tactile micro-animation feel.
+- **Unified Landing Page:** Rewrote `src/pages/index.js` as a full landing page. It now features stats counters (active alerts, resolved returns, points awarded), a step-by-step campus trust loop explanation, and a formatted podium-style leaderboard with badges.
+- **Unified Feed & Search:** Replaced the separate browse link with an embedded search feed directly on the Home page. Users can query keywords, locations, or AI tags and filter by category (All / Lost / Found) without leaving the dashboard.
+- **Side-by-Side User Dashboard:** Added a special dashboard visible only to logged-in users on the Home page. It splits their active reports into "My Lost" and "My Found" side-by-side, displaying their current status and Handshake PIN codes directly on the cards for easy in-person reference.
+- **Visual Image Upload Previews:** Added a custom dashed upload container in the reporting pages. Selecting an image displays a neat thumbnail with a shadow and an option to remove the upload before submitting.
+- **Passcode Safe Terminal UI:** Balanced `item/[id].js` into a 2-column layout (left: photo + Leaflet map; right: text + interactions). Styled the Handshake verification box as a numeric PIN entry pad for claimers.
+- **Contextual Chat Room Banners:** Added a live banner at the top of the chat room in `chat/[id].js` that retrieves parent metadata. If active, it reminds posters of their Handshake PIN and instructs claimers on how to obtain it.
+
+---
+
 ## Bugs Fixed
 
 | # | Bug | Symptom | Root Cause | Fix |
@@ -218,6 +234,8 @@ Points are called **"Trust Points"** (not "Hackmatrix Points" — renamed to bet
 | 4 | `id is not defined` | Item page crashed immediately | When adding `codeInput` state, the line `const { id, type } = router.query` was accidentally replaced | Re-added the router query destructuring |
 | 5 | Chat input required scrolling | User had to scroll to the bottom of the page to type a message | Root `<div>` was `min-h-screen` so it grew to fit all content | Changed to `h-screen overflow-hidden` with flex internal scroll |
 | 6 | Messages didn't auto-scroll | User had to manually scroll down after each message | No scroll logic implemented | Added `useRef` + `scrollIntoView` triggered by `useEffect` on `messages` state |
+| 7 | `neo-button` felt flat/plain | Buttons using `neo-button` class had no border, shadow, or hover state | Omitted CSS definition in design tokens | Defined `@utility neo-button` in `globals.css` with hover/active translates |
+| 8 | Balanced detail column sizing | Item pages had extremely long right columns and tiny left columns | Left column only held the image while maps and details stacked on the right | Split layout so image + Leaflet map sit on the left, and details + actions sit on the right |
 
 ---
 

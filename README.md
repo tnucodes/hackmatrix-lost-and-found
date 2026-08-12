@@ -9,12 +9,14 @@
 Most campuses rely on WhatsApp groups and paper notices for lost & found. This app replaces that chaos with a structured, intelligent, and secure platform where students can report, match, and retrieve lost items — with a gamified trust system to reward good actors.
 
 **Key Features:**
-- 📸 **AI Image Analysis** — Upload a photo of a found item; Gemini Flash automatically describes it and extracts searchable tags
-- 🗺️ **Interactive Maps** — Drop a GPS pin when reporting; the exact location is shown on the item details page
-- 🤖 **Smart Matching** — Lost something? AI scans all found items and surfaces the most likely matches for you
-- 💬 **Real-Time Chat** — Message the finder/owner directly in-app, with a full Inbox hub
-- 🤝 **Handshake Verification** — An anti-cheat OTP system that proves two users physically met before awarding Trust Points
-- 🏆 **Trust Leaderboard** — See who has helped return the most items on campus
+- 🏠 **Unified Landing Page** — A premium, high-impact landing page featuring live campus stats, podium-style trust leaderboard, and illustrated guides.
+- 🏫 **Merged Search Feed** — Campus feed is embedded directly on the homepage, allowing quick keyword, location, and AI tag searches with active category switching.
+- 🕵️‍♂️ **Side-by-Side User Dashboard** — Logged-in students can view and manage their active lost/found reports side-by-side. Safe Handshake PIN codes are displayed directly on their dashboard cards for instant physical access.
+- 📸 **AI Image Analysis & Preview** — Upload a photo of a found item; Gemini Flash automatically describes it and extracts searchable tags. Drag-and-drop styling upload box displays live visual previews before submitting.
+- 🗺️ **Interactive Maps** — Drop a GPS pin when reporting; Leaflet displays the exact coordinates on the item details page.
+- 🤖 **Smart Matching** — Lost something? AI scans all found items and surfaces the most likely matches as premium suggested cards.
+- 🤝 **Passcode safe handovers** — Balanced item details page with a digital PIN verification pad for claimers. OTP matches verify handovers to award Trust Points.
+- 💬 **Integrated Chat Banner** — Direct messaging in-app with a parent metadata banner that displays item photos, status, and poster Handshake PIN codes directly inside the chat window.
 
 ---
 
@@ -26,7 +28,7 @@ Most campuses rely on WhatsApp groups and paper notices for lost & found. This a
 | Database + Auth | Firebase (Firestore + Authentication) |
 | AI | Google Gemini Flash (`gemini-flash-latest`) |
 | Maps | react-leaflet + OpenStreetMap (free, no billing) |
-| Styling | Tailwind CSS with Neo-Brutalism design system |
+| Styling & Fonts | Tailwind CSS v4 + Space Grotesk / Plus Jakarta Sans Google Fonts |
 | Animations | framer-motion |
 | Icons | lucide-react |
 
@@ -44,15 +46,15 @@ src/
 │   ├── MapPicker.js          # Interactive Leaflet map (for report forms — click to drop pin)
 │   └── MapDisplay.js         # Read-only Leaflet map (for item detail page)
 ├── pages/
-│   ├── index.js              # Dashboard: splash screen, action buttons, leaderboard
-│   ├── browse.js             # Live feed of all lost & found items with filters
-│   ├── report-lost.js        # Form to report a lost item (with map pin + handshake code)
-│   ├── report-found.js       # Form to report a found item (with AI analysis + map pin)
-│   ├── inbox.js              # Message hub: all active conversations in one place
-│   ├── login.js              # Login page
-│   ├── signup.js             # Signup page
-│   ├── item/[id].js          # Item details (map, AI tags, smart matcher, chat, verification)
-│   ├── chat/[id].js          # Real-time chat room with auto-scroll to latest message
+│   ├── index.js              # Dashboard: landing page, live stats, side-by-side user dashboard, unified feed with search
+│   ├── browse.js             # Feed view with aligned search, category filters, and premium cards
+│   ├── report-lost.js        # Lost form (dashed upload box, live preview, MapPicker, secure code)
+│   ├── report-found.js       # Found form (dashed upload, live preview, Gemini image scan, MapPicker)
+│   ├── inbox.js              # Inbox hub: chat cards with dates, badges, and user tags
+│   ├── login.js              # Polished login page with responsive inputs and custom borders
+│   ├── signup.js             # Polished signup page
+│   ├── item/[id].js          # Balanced 2-columns (media + map on left; details + PIN pad terminal on right)
+│   ├── chat/[id].js          # Chat room with colored message bubble cards, and active context banners
 │   └── api/
 │       ├── analyze-image.js  # Gemini image analysis API route (POST)
 │       └── find-matches.js   # Gemini smart-matching API route (POST)
@@ -169,6 +171,8 @@ This enables the **Inbox** page to query `where("participants", "array-contains"
 | Submit happened instantly with no analysis | 500 error from Gemini: wrong model endpoint | Switched from unavailable model to `gemini-flash-latest` |
 | `id is not defined` on item page | When adding `codeInput` state, accidentally deleted `const { id, type } = router.query` | Re-added the destructured router query |
 | Chat input bar required scrolling to reach | Root div was `min-h-screen` which grew with content | Changed to `h-screen overflow-hidden` with internal scroll on message list |
+| Flat buttons and no click states | `neo-button` class was used across pages but omitted from globals.css | Defined `@utility neo-button` in CSS with hover/active translations |
+| Unbalanced item detail columns | Left column held only details image, causing right column to overflow vertically | Stacked image + Leaflet map on the left, and details + PIN safe on the right |
 
 ---
 
