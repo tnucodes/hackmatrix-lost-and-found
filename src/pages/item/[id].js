@@ -186,9 +186,9 @@ export default function ItemDetails() {
           {/* Left Column: Visual Media & Maps ( h-fit flex-grow or fixed widths ) */}
           <div className="w-full md:w-[45%] border-b-4 md:border-b-0 md:border-r-4 border-black flex flex-col bg-gray-50">
             {/* Image Box */}
-            <div className="h-64 sm:h-80 w-full bg-gray-200 border-b-4 border-black overflow-hidden relative flex items-center justify-center">
+            <div className="h-64 sm:h-96 w-full bg-gray-100 border-b-4 border-black overflow-hidden relative flex items-center justify-center">
               {item.imageUrl ? (
-                <img src={item.imageUrl} alt={item.title} className="object-cover w-full h-full" />
+                <img src={item.imageUrl} alt={item.title} className="object-contain max-w-full max-h-full p-2" />
               ) : (
                 <div className="flex flex-col items-center justify-center font-black uppercase text-gray-400 p-8 text-center select-none bg-gray-100 h-full w-full">
                   <span className="text-5xl mb-2">{type === 'lost' ? '🔍' : '📦'}</span>
@@ -199,7 +199,7 @@ export default function ItemDetails() {
 
             {/* Map Box - Only for Found Items */}
             {type === "found" && (
-              <div className="p-4 flex-grow flex flex-col justify-end">
+              <div className="p-4 flex flex-col gap-2">
                 <h3 className="font-black uppercase text-xs text-gray-500 mb-2 flex items-center gap-1.5">
                   <MapPin size={14} className="text-black" /> Pinpoint Location
                 </h3>

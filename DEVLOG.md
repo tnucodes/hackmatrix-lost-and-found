@@ -229,6 +229,7 @@ Points are called **"Trust Points"** (not "Hackmatrix Points" — renamed to bet
 - **Conversational 2-Step Found Wizard:** Converted the Found reporting form (`report-found.js`) into a clean 2-step card wizard. Step 1 handles photo uploads, immediately auto-triggering the Gemini AI scan in the background to pre-fill details and store the exact image summary in `aiDescription`. Step 2 handles found location descriptions and campus map coordinate drops.
 - **Campus Map Constraints:** Configured `MapPicker.js` default coordinates to lock onto the college campus `(17.7100958, 83.1609111)`, setting rigid dragging bounds of 1km and zoom level constraints (`zoom={16}`, `minZoom={15}`).
 - **Real-Time Firestore Listeners:** Converted all static data fetching (`getDocs`, `getDoc`) on the home page (`index.js`), standalone feed (`browse.js`), and details pages (`item/[id].js`) into live subscriptions using Firestore's `onSnapshot` listener. Status updates (such as claiming or verification resolves) propagate in real-time across users without page reloads.
+- **Details Media Alignment:** Set image containment to `object-contain` and increased vertical heights to `sm:h-96` in `item/[id].js` details pages to prevent portrait uploads (like calculators) from being cropped. Stacked the Map Box directly beneath the image by removing layout `flex-grow` and `justify-end` settings, resolving the empty white gap.
 
 ---
 
