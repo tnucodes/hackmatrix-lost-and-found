@@ -56,6 +56,7 @@ export default function ReportFound() {
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState("");
+  const [scanFailed, setScanFailed] = useState(false);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -75,11 +76,14 @@ export default function ReportFound() {
       setImagePreview(null);
       setAiDescription("");
       setAiTags([]);
+      setScanFailed(false);
+      setError("");
     }
   };
 
   const runAutoAiScan = async (previewUrl, file) => {
     setAiLoading(true);
+    setScanFailed(false);
     setError("");
     
     try {
@@ -95,6 +99,10 @@ export default function ReportFound() {
       });
       const data = await response.json();
       
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to analyze image");
+      }
+      
       if (data.description) {
         setAiDescription(data.description);
         setDescription(data.description);
@@ -107,7 +115,8 @@ export default function ReportFound() {
       }
     } catch (err) {
       console.error("Gemini scan failed:", err);
-      setError("AI analysis failed. You can still type details manually!");
+      setError(err.message || "AI analysis failed. You can still type details manually!");
+      setScanFailed(true);
     } finally {
       setAiLoading(false);
     }
@@ -236,11 +245,27 @@ export default function ReportFound() {
                             <div className="flex gap-3 mt-4 w-full justify-center">
                               <button 
                                 type="button" 
-                                onClick={() => { setImage(null); setImagePreview(null); setAiDescription(""); setAiTags([]); }}
+                                onClick={() => { 
+                                  setImage(null); 
+                                  setImagePreview(null); 
+                                  setAiDescription(""); 
+                                  setAiTags([]); 
+                                  setScanFailed(false);
+                                  setError("");
+                                }}
                                 className="bg-red-400 text-black font-black text-xs uppercase px-6 py-2 border-2 border-black hover:bg-red-500 shadow-[2px_2px_0_#000]"
                               >
                                 Remove Photo
                               </button>
+                              {scanFailed && (
+                                <button 
+                                  type="button" 
+                                  onClick={() => runAutoAiScan(imagePreview, image)}
+                                  className="bg-neo-yellow text-black font-black text-xs uppercase px-6 py-2 border-2 border-black hover:bg-yellow-400 shadow-[2px_2px_0_#000]"
+                                >
+                                  Retry AI Scan
+                                </button>
+                              )}
                             </div>
                           </>
                         )}

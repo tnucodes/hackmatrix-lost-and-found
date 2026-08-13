@@ -63,7 +63,27 @@ TAGS: <tag1, tag2, tag3...>`;
     res.status(200).json({ description, tags });
 
   } catch (error) {
-    console.error("Gemini API error:", error);
+    console.error("Gemini API error details:", {
+      message: error.message,
+      status: error.status,
+      stack: error.stack,
+      errorObj: error
+    });
+
+    const isRateLimit = 
+      error.status === 429 || 
+      (error.message && (
+        error.message.includes("429") || 
+        error.message.toLowerCase().includes("resource exhausted") ||
+        error.message.toLowerCase().includes("rate limit") ||
+        error.message.toLowerCase().includes("quota")
+      ));
+
+    if (isRateLimit) {
+      console.warn("⚠️ GEMINI RATE LIMIT TRIGGERED: Request was blocked due to quota or rate limit limits.");
+      return res.status(429).json({ error: "Gemini API rate limit exceeded. Please wait a moment and try again." });
+    }
+
     res.status(500).json({ error: "Failed to analyze image" });
   }
 }

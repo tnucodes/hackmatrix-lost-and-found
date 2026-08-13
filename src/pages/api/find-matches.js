@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
     // Format the found items into a readable list for the AI
     const foundItemsList = foundItems.map(item => 
-      `ID: ${item.id} | Title: ${item.title} | Tags: ${item.aiTags ? item.aiTags.join(", ") : "None"}`
+      `ID: ${item.id} | Title: ${item.title} | Description: ${item.description || item.aiDescription || "None"} | Tags: ${item.aiTags && item.aiTags.length > 0 ? item.aiTags.join(", ") : "None"}`
     ).join("\n");
 
     const prompt = `You are an AI assistant for a Lost and Found app.
