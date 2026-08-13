@@ -269,7 +269,8 @@ export default function Home() {
                   <div className="bg-white p-6 neo-border neo-shadow flex flex-col">
                     <div className="flex justify-between items-center mb-4 pb-2 border-b-4 border-black">
                       <h4 className="text-xl font-black uppercase flex items-center gap-2">
-                        <span className="text-neo-pink text-2xl">❌</span> My Lost Reports
+                        {/* <span className="text-neo-pink text-2xl">❌</span>  */}
+                        My Lost Reports
                       </h4>
                       <span className="bg-neo-pink text-xs font-black px-2.5 py-1 neo-border">
                         {myLost.length} Reports
@@ -304,7 +305,8 @@ export default function Home() {
                   <div className="bg-white p-6 neo-border neo-shadow flex flex-col">
                     <div className="flex justify-between items-center mb-4 pb-2 border-b-4 border-black">
                       <h4 className="text-xl font-black uppercase flex items-center gap-2">
-                        <span className="text-neo-green text-2xl">📦</span> My Found Reports
+                        {/* <span className="text-neo-green text-2xl">📦</span> */}
+                         My Found Reports
                       </h4>
                       <span className="bg-neo-green text-xs font-black px-2.5 py-1 neo-border">
                         {myFound.length} Reports
