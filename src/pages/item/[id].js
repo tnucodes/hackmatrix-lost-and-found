@@ -4,7 +4,7 @@ import { db } from "../../lib/firebase";
 import { doc, getDoc, collection, getDocs, query, updateDoc, setDoc, where, onSnapshot } from "firebase/firestore";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { MessageSquare, MapPin, Sparkles, Trophy, ArrowLeft, ShieldCheck, Mail, Calendar } from "lucide-react";
+import { MessageSquare, MapPin, Sparkles, Trophy, ArrowLeft, ShieldCheck, Mail, Calendar, Loader2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import dynamic from "next/dynamic";
 
@@ -23,6 +23,10 @@ export default function ItemDetails() {
   const [isMatching, setIsMatching] = useState(false);
   const [matches, setMatches] = useState([]);
   const [hasSearchedMatches, setHasSearchedMatches] = useState(false);
+
+  // States for on-demand AI scan
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   useEffect(() => {
     if (!id || !type) return;
@@ -166,6 +170,44 @@ export default function ItemDetails() {
     }
   };
 
+  const handleGenerateAiAnalysis = async () => {
+    if (!item || !item.imageUrl) return;
+    setIsGeneratingAi(true);
+    setAiError("");
+
+    try {
+      const response = await fetch("/api/analyze-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base64Image: item.imageUrl })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to analyze image");
+      }
+
+      const collectionName = type === "lost" ? "lostItems" : "foundItems";
+      const docRef = doc(db, collectionName, item.id);
+      
+      await updateDoc(docRef, {
+        aiDescription: data.description || item.description,
+        aiTags: data.tags || []
+      });
+
+      setItem(prev => ({
+        ...prev,
+        aiDescription: data.description || item.description,
+        aiTags: data.tags || []
+      }));
+    } catch (err) {
+      console.error("Failed to generate AI tags:", err);
+      setAiError(err.message || "Failed to scan image with AI. Please try again.");
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
+
   if (loading) return <div className="min-h-screen bg-neo-bg p-10 text-2xl font-black">Loading Details...</div>;
   if (!item) return <div className="min-h-screen bg-neo-bg p-10 text-2xl font-black">Item not found.</div>;
 
@@ -257,7 +299,11 @@ export default function ItemDetails() {
               </div>
 
               {/* Gemini AI Auto description card - ONLY for Found Items */}
-              {type === "found" && (item.aiDescription || (item.aiTags && item.aiTags.length > 0)) && (
+              {type === "found" && (
+                (item.aiDescription && item.aiDescription !== item.description) || 
+                (item.aiTags && item.aiTags.length > 0) || 
+                (isCreator && item.imageUrl && (!item.aiTags || item.aiTags.length === 0))
+              ) && (
                 <div className="bg-neo-bg border-3 border-black p-4 mb-6 relative shadow-[3px_3px_0_#000]">
                   <div className="absolute -top-3.5 -right-3.5 text-2xl animate-bounce">✨</div>
                   <h3 className="font-black uppercase text-xs text-neo-pink mb-2 flex items-center gap-1">
@@ -270,12 +316,39 @@ export default function ItemDetails() {
                   )}
                   
                   {item.aiTags && item.aiTags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5 mb-2">
                       {item.aiTags.map(tag => (
                         <span key={tag} className="bg-black text-white px-2 py-0.5 text-[9px] font-black uppercase">
                           #{tag}
                         </span>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Render Generate button if creator and no tags generated yet */}
+                  {isCreator && item.imageUrl && (!item.aiTags || item.aiTags.length === 0) && (
+                    <div className="mt-2 pt-2 border-t border-dashed border-gray-400">
+                      <p className="font-bold text-[11px] text-gray-600 mb-2.5">
+                        AI analysis is missing or failed during reporting. Scan the photo now to generate tags and help matching.
+                      </p>
+                      {aiError && (
+                        <p className="text-red-600 font-bold text-xs mb-2">⚠️ {aiError}</p>
+                      )}
+                      <button
+                        onClick={handleGenerateAiAnalysis}
+                        disabled={isGeneratingAi}
+                        className="bg-neo-pink text-black px-4 py-2 text-xs font-black uppercase neo-button flex items-center gap-2 shadow-[2px_2px_0_#000] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isGeneratingAi ? (
+                          <>
+                            <Loader2 className="animate-spin" size={14} /> Scanning Image...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={14} /> Generate AI Vision Tags
+                          </>
+                        )}
+                      </button>
                     </div>
                   )}
                 </div>
